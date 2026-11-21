@@ -1,0 +1,50 @@
+name: New device
+description: Ask for a device that is not supported yet.
+title: "New device: "
+labels: ["new device"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Drivers are written from published protocols or from USB captures by owners; protocols are never guessed.
+        A capture of the vendor app reading the battery makes support possible: see CONTRIBUTING.md, "Adding a device".
+  - type: input
+    id: device
+    attributes:
+      label: Device model and vendor
+    validations:
+      required: true
+  - type: dropdown
+    id: connection
+    attributes:
+      label: Connection
+      multiple: true
+      options:
+        - 2.4 GHz receiver
+        - USB cable
+        - Bluetooth
+    validations:
+      required: true
+  - type: input
+    id: ids
+    attributes:
+      label: VID:PID
+      description: From `2.4BatteryMonitor.exe --dump`.
+      placeholder: e.g. 1234:5678
+  - type: textarea
+    id: dump
+    attributes:
+      label: "--dump"
+      description: The lines of `2.4BatteryMonitor.exe --dump` for this device.
+      render: text
+  - type: textarea
+    id: sources
+    attributes:
+      label: Known protocol sources
+      description: Open-source projects or documents that read this device's battery, if you know any.
+  - type: checkboxes
+    id: capture
+    attributes:
+      label: USB capture
+      options:
+        - label: I can record a USB capture (USBPcap / Wireshark) of the vendor app reading the battery.

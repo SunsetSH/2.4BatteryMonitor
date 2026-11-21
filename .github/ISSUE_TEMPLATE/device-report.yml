@@ -1,0 +1,51 @@
+name: Device report
+description: Say whether a listed device works (the app's "Report this device..." fills most of this in).
+title: "Device report: "
+labels: ["device report"]
+body:
+  - type: input
+    id: device
+    attributes:
+      label: Device model
+      placeholder: e.g. Logitech G502 X Lightspeed
+    validations:
+      required: true
+  - type: dropdown
+    id: connection
+    attributes:
+      label: Connection
+      options:
+        - 2.4 GHz receiver
+        - USB cable
+        - Bluetooth
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: Does the battery level work?
+      options:
+        - "Yes, it matches the vendor app or the device"
+        - "Partly (level shown, charging or sleep wrong)"
+        - "No, the device is listed without a level"
+        - "No, the device is not listed"
+    validations:
+      required: true
+  - type: textarea
+    id: compare
+    attributes:
+      label: What the vendor app or the device shows
+      description: Level, charging state, and what 2.4BatteryMonitor shows at the same time.
+  - type: input
+    id: version
+    attributes:
+      label: App version and date
+      placeholder: e.g. 1.0.0, 2026-11-21
+    validations:
+      required: true
+  - type: textarea
+    id: dump
+    attributes:
+      label: "--list and --dump"
+      description: Output of `2.4BatteryMonitor.exe --list` and the lines of `--dump` for this device.
+      render: text

@@ -1,0 +1,25 @@
+# Matches the existing code: 4-space indent, 120 columns, attached braces, short one-line bodies.
+# Only changed lines are checked (git clang-format in .githooks/pre-commit); do not reformat whole files.
+BasedOnStyle: LLVM
+IndentWidth: 4
+ColumnLimit: 120
+AccessModifierOffset: -4
+BreakBeforeBraces: Attach
+PointerAlignment: Left
+Cpp11BracedListStyle: false
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine: true
+AllowShortBlocksOnASingleLine: Empty
+AllowShortLambdasOnASingleLine: All
+AlignAfterOpenBracket: Align
+AlignTrailingComments:
+  Kind: Leave
+SpacesBeforeTrailingComments: 2
+NamespaceIndentation: None
+FixNamespaceComments: false
+IndentCaseLabels: false
+# windows.h must come before other Win32 headers; keep include order as written.
+SortIncludes: Never
+IncludeBlocks: Preserve
+ReflowComments: false

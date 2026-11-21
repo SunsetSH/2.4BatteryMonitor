@@ -1,0 +1,37 @@
+# Build output
+build/
+/2.4BatteryMonitor
+*.exe
+*.o
+*.log
+dist/
+third_party/
+
+# Local editor settings
+.vscode/
+.idea/
+
+# AI agent instructions and settings stay local
+CLAUDE.md
+CLAUDE.local.md
+AGENTS.md
+GEMINI.md
+.claude/
+.cursor/
+.cursorrules
+.codex/
+.windsurfrules
+.github/copilot-instructions.md
+.mcp.json
+.aider*
+
+# Secrets
+.env*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.sig

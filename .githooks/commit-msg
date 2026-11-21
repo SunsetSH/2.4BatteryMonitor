@@ -1,0 +1,12 @@
+#!/bin/sh
+# Rejects AI attribution in commit messages: Co-Authored-By trailers naming AI tools and "Generated with" lines.
+msg="$1"
+bad=$(grep -n -i -E \
+    '^[[:space:]]*co-authored-by:.*(claude|anthropic|openai|chatgpt|gpt|copilot|gemini|cursor|codex|aider|devin|windsurf|codeium|tabnine|\bai\b|bot@)|generated (with|by) |🤖' \
+    "$msg" | grep -v '^[0-9]*:#')
+if [ -n "$bad" ]; then
+    echo "commit-msg: AI attribution is not allowed in commit messages:" >&2
+    printf '  %s\n' "$bad" >&2
+    exit 1
+fi
+exit 0

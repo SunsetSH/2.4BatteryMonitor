@@ -1,0 +1,33 @@
+#include <winver.h>
+#include "../build/version.h"
+
+// The application and shortcut use the same monogram icon group.
+1 ICON "app.ico"
+1 24 "app.manifest"
+
+// The built-in UI languages: lang\*.txt joined by the build (see src/i18n.cpp).
+LANGS RCDATA "languages.txt"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION WB_VERSION_RESOURCE
+PRODUCTVERSION WB_VERSION_RESOURCE
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "FileDescription", "2.4BatteryMonitor"
+      VALUE "CompanyName", "SunsetSH"
+      VALUE "ProductName", "2.4BatteryMonitor"
+      VALUE "FileVersion", WB_VERSION_STRING
+      VALUE "ProductVersion", WB_VERSION_STRING
+      VALUE "OriginalFilename", "2.4BatteryMonitor.exe"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x409, 1200
+  END
+END

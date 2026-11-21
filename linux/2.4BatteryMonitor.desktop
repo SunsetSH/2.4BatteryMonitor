@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=2.4BatteryMonitor
+Comment=Show battery levels of wireless mice, keyboards and headsets in the system tray
+Exec=2.4BatteryMonitor
+Icon=2.4BatteryMonitor
+Terminal=false
+Categories=System;Monitor;Utility;
+StartupNotify=false

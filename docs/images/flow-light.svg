@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="250" viewBox="0 0 960 250" role="img" aria-label="Devices report their battery through a receiver, a cable or Bluetooth to 2.4BatteryMonitor, which shows it on the taskbar">
+<style>.t { font-family:'Segoe UI Variable Text','Segoe UI',system-ui,-apple-system,'Helvetica Neue',Arial,sans-serif; } .dot { fill: #005fb8; }</style>
+<rect width="960" height="250" rx="18" fill="#f3f3f3" stroke="#dedede"/>
+<rect x="40" y="28" width="52" height="44" rx="12" fill="#ffffff" stroke="#dedede"/><g transform="translate(54 38) scale(1.0)" fill="none" stroke="#1a1a1a" stroke-width="1.80" stroke-linecap="round" stroke-linejoin="round" ><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="7" rx="1.6"/><rect x="17" y="14" width="4" height="7" rx="1.6"/></g>
+<rect x="40" y="80" width="52" height="44" rx="12" fill="#ffffff" stroke="#dedede"/><g transform="translate(54 90) scale(1.0)" fill="none" stroke="#1a1a1a" stroke-width="1.80" stroke-linecap="round" stroke-linejoin="round" ><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 3v6"/></g>
+<rect x="40" y="132" width="52" height="44" rx="12" fill="#ffffff" stroke="#dedede"/><g transform="translate(54 142) scale(1.0)" fill="none" stroke="#1a1a1a" stroke-width="1.80" stroke-linecap="round" stroke-linejoin="round" ><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h.01M9 10h.01M12 10h.01M15 10h.01M18 10h.01M7 14h10"/></g>
+<rect x="40" y="184" width="52" height="44" rx="12" fill="#ffffff" stroke="#dedede"/><g transform="translate(54 194) scale(1.0)" fill="none" stroke="#1a1a1a" stroke-width="1.80" stroke-linecap="round" stroke-linejoin="round" ><path d="M7 8h10a4 4 0 0 1 4 4l.6 4.2a2.4 2.4 0 0 1-4.3 1.6L15.5 16h-7l-1.8 1.8a2.4 2.4 0 0 1-4.3-1.6L3 12a4 4 0 0 1 4-4z"/><path d="M8 11v3M6.5 12.5h3M15.5 12h.01M17.5 13.5h.01"/></g>
+<rect x="236" y="50" width="150" height="44" rx="12" fill="#ffffff" stroke="#dedede"/><g transform="translate(250 60) scale(1.0)" fill="none" stroke="#1a1a1a" stroke-width="1.80" stroke-linecap="round" stroke-linejoin="round" ><rect x="7" y="9" width="10" height="12" rx="2"/><path d="M9 6.5a4 4 0 0 1 6 0M7 4a7.5 7.5 0 0 1 10 0"/></g><text class="t" x="284" y="78" font-size="13" fill="#1a1a1a">2.4 GHz</text>
+<rect x="236" y="122" width="150" height="44" rx="12" fill="#ffffff" stroke="#dedede"/><g transform="translate(250 132) scale(1.0)" fill="none" stroke="#1a1a1a" stroke-width="1.80" stroke-linecap="round" stroke-linejoin="round" ><path d="M12 21V5M12 5l-3 3M12 5l3 3M8 12v2l4 3M16 10v3l-4 3"/></g><text class="t" x="284" y="150" font-size="13" fill="#1a1a1a">USB</text>
+<rect x="236" y="194" width="150" height="44" rx="12" fill="#ffffff" stroke="#dedede"/><g transform="translate(250 204) scale(1.0)" fill="none" stroke="#1a1a1a" stroke-width="1.80" stroke-linecap="round" stroke-linejoin="round" ><path d="m7 7 10 10-5 4V3l5 4L7 17"/></g><text class="t" x="284" y="222" font-size="13" fill="#1a1a1a">Bluetooth</text>
+<rect x="520" y="85" width="170" height="80" rx="12" fill="#ffffff" stroke="#dedede"/><rect x="538" y="105" width="40" height="40" rx="9" fill="#005fb8"/><text class="t" x="558" y="131" font-size="16" font-weight="700" text-anchor="middle" fill="#f3f3f3">2.4</text><text class="t" x="590" y="130" font-size="12" font-weight="600" fill="#1a1a1a">BatteryMonitor</text>
+<rect x="770" y="99" width="160" height="52" rx="12" fill="#ffffff" stroke="#dedede"/><g transform="translate(784 113) scale(0.8333333333333334)" fill="none" stroke="#1a1a1a" stroke-width="1.80" stroke-linecap="round" stroke-linejoin="round" ><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="7" rx="1.6"/><rect x="17" y="14" width="4" height="7" rx="1.6"/></g><text class="t" x="808" y="129" font-size="13" fill="#1a1a1a">47%</text><g transform="translate(848 113) scale(0.8333333333333334)" fill="none" stroke="#1a1a1a" stroke-width="1.80" stroke-linecap="round" stroke-linejoin="round" ><rect x="6" y="3" width="12" height="18" rx="6"/><path d="M12 3v6"/></g><text class="t" x="872" y="129" font-size="13" fill="#1a1a1a">86%</text><g transform="translate(906 116) scale(0.5)" fill="none" stroke="#0078d4" stroke-width="1.60" stroke-linecap="round" stroke-linejoin="round" ><path d="M13 2 5 13h6l-1 9 8-11h-6z"/></g>
+<path d="M92 50 C 160 50, 170 72, 236 72" fill="none" stroke="#dedede" stroke-width="1.5"/>
+<path d="M92 50 C 160 50, 170 144, 236 144" fill="none" stroke="#dedede" stroke-width="1.5"/>
+<path d="M92 50 C 160 50, 170 216, 236 216" fill="none" stroke="#dedede" stroke-width="1.5"/>
+<path d="M92 102 C 160 102, 170 72, 236 72" fill="none" stroke="#dedede" stroke-width="1.5"/>
+<path d="M92 102 C 160 102, 170 144, 236 144" fill="none" stroke="#dedede" stroke-width="1.5"/>
+<path d="M92 102 C 160 102, 170 216, 236 216" fill="none" stroke="#dedede" stroke-width="1.5"/>
+<path d="M92 154 C 160 154, 170 72, 236 72" fill="none" stroke="#dedede" stroke-width="1.5"/>
+<path d="M92 154 C 160 154, 170 144, 236 144" fill="none" stroke="#dedede" stroke-width="1.5"/>
+<path d="M92 154 C 160 154, 170 216, 236 216" fill="none" stroke="#dedede" stroke-width="1.5"/>
+<path d="M92 206 C 160 206, 170 72, 236 72" fill="none" stroke="#dedede" stroke-width="1.5"/>
+<path d="M92 206 C 160 206, 170 144, 236 144" fill="none" stroke="#dedede" stroke-width="1.5"/>
+<path d="M92 206 C 160 206, 170 216, 236 216" fill="none" stroke="#dedede" stroke-width="1.5"/>
+<path d="M386 72 C 450 72, 460 125, 520 125" fill="none" stroke="#dedede" stroke-width="1.5"/>
+<path d="M386 144 C 450 144, 460 125, 520 125" fill="none" stroke="#dedede" stroke-width="1.5"/>
+<path d="M386 216 C 450 216, 460 125, 520 125" fill="none" stroke="#dedede" stroke-width="1.5"/>
+<path d="M690 125 C 740 125, 740 125, 770 125" fill="none" stroke="#dedede" stroke-width="1.5"/>
+<circle class="dot" r="3.5"><animateMotion dur="2.6s" begin="0.00s" repeatCount="indefinite" path="M92 50 C 160 50, 170 72, 236 72"/></circle>
+<circle class="dot" r="3.5"><animateMotion dur="2.6s" begin="0.37s" repeatCount="indefinite" path="M92 102 C 160 102, 170 144, 236 144"/></circle>
+<circle class="dot" r="3.5"><animateMotion dur="2.6s" begin="0.74s" repeatCount="indefinite" path="M92 154 C 160 154, 170 216, 236 216"/></circle>
+<circle class="dot" r="3.5"><animateMotion dur="2.6s" begin="1.11s" repeatCount="indefinite" path="M92 206 C 160 206, 170 216, 236 216"/></circle>
+<circle class="dot" r="3.5"><animateMotion dur="1.6s" begin="1.48s" repeatCount="indefinite" path="M386 72 C 450 72, 460 125, 520 125"/></circle>
+<circle class="dot" r="3.5"><animateMotion dur="1.6s" begin="1.85s" repeatCount="indefinite" path="M386 144 C 450 144, 460 125, 520 125"/></circle>
+<circle class="dot" r="3.5"><animateMotion dur="1.6s" begin="2.22s" repeatCount="indefinite" path="M386 216 C 450 216, 460 125, 520 125"/></circle>
+<circle class="dot" r="3.5"><animateMotion dur="1.6s" begin="2.59s" repeatCount="indefinite" path="M690 125 C 740 125, 740 125, 770 125"/></circle>
+</svg>
