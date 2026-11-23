@@ -26,17 +26,19 @@ try {
         return
     }
     if ([IO.File]::ReadAllText($publicPath).Trim() -cne $public) { throw 'The local signing key differs from the configured public key.' }
-    $name = "2.4BatteryMonitor-Setup-$Version.exe"
-    $path = Join-Path $root "dist\$name"
-    $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
-    $data = [Text.Encoding]::ASCII.GetBytes("2.4BatteryMonitor release v1`n$repo`n$name`n$hash`n")
+    # The installer updates installed copies, the bare executable portable ones (src/update_core.h names both).
     $sha = [Security.Cryptography.SHA256]::Create()
     $ecdsa = [Security.Cryptography.ECDsaCng]::new($key)
     try {
-        $signature = $ecdsa.SignHash($sha.ComputeHash($data))
-        if ($signature.Length -ne 64) { throw 'Expected a 64-byte ECDSA P-256 signature.' }
-        [IO.File]::WriteAllBytes("$path.sig", $signature)
-        Write-Output "Signature written to $path.sig"
+        foreach ($name in "2.4BatteryMonitor-Setup-$Version.exe", "2.4BatteryMonitor-$Version.exe") {
+            $path = Join-Path $root "dist\$name"
+            $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
+            $data = [Text.Encoding]::ASCII.GetBytes("2.4BatteryMonitor release v1`n$repo`n$name`n$hash`n")
+            $signature = $ecdsa.SignHash($sha.ComputeHash($data))
+            if ($signature.Length -ne 64) { throw 'Expected a 64-byte ECDSA P-256 signature.' }
+            [IO.File]::WriteAllBytes("$path.sig", $signature)
+            Write-Output "Signature written to $path.sig"
+        }
     } finally {
         $ecdsa.Dispose()
         $sha.Dispose()

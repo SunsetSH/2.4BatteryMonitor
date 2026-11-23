@@ -39,6 +39,7 @@
 #include "device_report.h"
 #include "driver_backoff.h"
 #include "overview.h"
+#include "self_update.h"
 #include "settings_rows.h"
 #include "status_file.h"
 #include "status_text.h"
@@ -140,6 +141,7 @@ struct AlertLatch {
 std::map<std::wstring, AlertLatch> g_alertLatches;
 ULONGLONG g_latchClock = 0;
 bool g_alertIconAdded = false;  // short-lived tray icon for widget-mode notifications
+bool g_updateNotePending = false;  // the last balloon shown is "update available": a click on it installs
 bool g_placeholder = false;
 HICON g_placeholderIcon = nullptr;
 
@@ -327,7 +329,7 @@ status_text::Level ToneOf(const TrayEntry& e, const status_text::Shown& shown) {
 }
 
 bool TrayCall(DWORD msg, UINT uid, HICON icon, const std::wstring& tip, const wchar_t* infoTitle = nullptr,
-              const std::wstring& info = L"") {
+              const std::wstring& info = L"", DWORD infoFlags = NIIF_WARNING) {
     NOTIFYICONDATAW nid{ sizeof(nid) };
     nid.hWnd = g_hwnd;
     nid.uID = uid;
@@ -339,7 +341,7 @@ bool TrayCall(DWORD msg, UINT uid, HICON icon, const std::wstring& tip, const wc
         nid.uFlags |= NIF_INFO;
         CopyTip(nid.szInfoTitle, ARRAYSIZE(nid.szInfoTitle), infoTitle);
         CopyTip(nid.szInfo, ARRAYSIZE(nid.szInfo), info);
-        nid.dwInfoFlags = NIIF_WARNING;
+        nid.dwInfoFlags = infoFlags;
     }
     const bool ok = Shell_NotifyIconW(msg, &nid) != FALSE;
     if (ok && msg == NIM_ADD) {
@@ -377,7 +379,17 @@ bool FullScreenBusy() {
     return state == QUNS_BUSY || state == QUNS_RUNNING_D3D_FULL_SCREEN || state == QUNS_PRESENTATION_MODE;
 }
 
+// Windows notification balloons need a tray icon. Keep a temporary one in widget mode
+// long enough for the shell to display the notification, then remove it.
+void ShowOnAlertIcon(const std::wstring& title, const std::wstring& message, DWORD flags) {
+    TrayCall(g_alertIconAdded ? NIM_MODIFY : NIM_ADD, ALERT_ICON_ID, PlaceholderIcon(), L"2.4BatteryMonitor",
+             title.c_str(), message, flags);
+    g_alertIconAdded = true;
+    SetTimer(g_hwnd, TIMER_ALERT_ICON, 60 * 1000, nullptr);
+}
+
 void ShowNotification(TrayEntry& e, const std::wstring& title, const std::wstring& message) {
+    g_updateNotePending = false;  // a click on the next balloon is about this device, not the update
     if (g_quietFullScreen && FullScreenBusy()) {
         g_heldNotes[e.st.key] = { title, message };
         SetTimer(g_hwnd, TIMER_HELD_NOTES, 30 * 1000, nullptr);
@@ -387,12 +399,25 @@ void ShowNotification(TrayEntry& e, const std::wstring& title, const std::wstrin
         TrayCall(NIM_MODIFY, e.uid, e.icon, DisplayName(e) + L"\n" + StatusText(e), title.c_str(), message);
         return;
     }
-    // Windows notification balloons need a tray icon. Keep a temporary one in widget mode
-    // long enough for the shell to display the notification, then remove it.
-    TrayCall(g_alertIconAdded ? NIM_MODIFY : NIM_ADD, ALERT_ICON_ID, PlaceholderIcon(),
-             L"2.4BatteryMonitor", title.c_str(), message);
-    g_alertIconAdded = true;
-    SetTimer(g_hwnd, TIMER_ALERT_ICON, 60 * 1000, nullptr);
+    ShowOnAlertIcon(title, message, NIIF_WARNING);
+}
+
+// A new version found by the automatic check (update.h): one notification. Clicking it asks before
+// anything is downloaded; nothing installs without that answer.
+bool AnnounceUpdate(const std::wstring& version) {
+    if (g_quietFullScreen && FullScreenBusy()) return false;
+    const std::wstring title = T(L"Update available");
+    const std::wstring message =
+        TF(L"2.4BatteryMonitor {version} is available. Click here to install it.", { { L"version", version } });
+    bool shown = false;
+    if (!g_useWidget)
+        for (auto& [key, e] : g_entries)
+            if (e.added && !shown)
+                shown = TrayCall(NIM_MODIFY, e.uid, e.icon, DisplayName(e) + L"\n" + StatusText(e), title.c_str(),
+                                 message, NIIF_INFO);
+    if (!shown) ShowOnAlertIcon(title, message, NIIF_INFO);
+    g_updateNotePending = true;
+    return true;
 }
 
 void ShowBatteryAlert(TrayEntry& e) {
@@ -1173,6 +1198,12 @@ LRESULT CALLBACK WndProc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
                 case WM_CONTEXTMENU: ShowMenu(); break;
                 case WM_RBUTTONUP: if (!HIWORD(lp)) ShowMenu(); break;
                 case WM_LBUTTONUP: if (!HIWORD(lp)) OpenOverviewAtCursor(); break;
+                case NIN_BALLOONUSERCLICK:
+                    if (g_updateNotePending) {
+                        g_updateNotePending = false;
+                        updates::InstallAvailable();
+                    }
+                    break;
                 case NIN_SELECT:
                 case NIN_KEYSELECT: {
                     // Enter / Space on a focused icon: version 4 puts the icon's position in wParam, and the
@@ -1316,6 +1347,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int) {
     if (!argv) return 1;
     bool json = false, help = false, list = false, dump = false, quit = false, unknown = false, background = false,
          timing = false;
+    DWORD updatedFrom = 0;  // --updated-from <pid>: started by a portable self-update (self_update.h)
     for (int i = 1; i < argc; ++i) {
         std::wstring_view arg = argv[i];
         if (arg == L"--json") json = true;
@@ -1327,6 +1359,8 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int) {
         else if (arg == L"--demo") g_demo = true;
         else if (arg == L"--wlmouse") g_wlmouseOnly = true;
         else if (arg == L"--timing") timing = true;
+        else if (arg == L"--updated-from" && i + 1 < argc)
+            updatedFrom = wcstoul(argv[++i], nullptr, 10);
         else unknown = true;
     }
     LocalFree(argv);
@@ -1375,6 +1409,9 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int) {
     }
     g_inst = inst;
 
+    // The old copy holds the mutex until it exits; take over only after that, or this copy would hand
+    // the request to the old one and quit.
+    if (updatedFrom) self_update::FinishUpdate(updatedFrom);
     const auto mutexName = L"Local\\24BatteryMonitorTray-" + identity;
     HANDLE mutex = CreateMutexW(nullptr, TRUE, mutexName.c_str());
     if (!mutex) return StartupError(L"Could not start the monitor in this Windows session.");
@@ -1392,6 +1429,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int) {
         }
         return StartupError(L"The running monitor did not accept the request to open.");
     }
+    if (!updatedFrom) self_update::RemoveLeftover();  // an earlier update could not clean up after itself
     SetCurrentProcessExplicitAppUserModelID(app_settings::kAppUserModelId);
     app_settings::SetReadOnly(g_demo);
     if (!g_demo) app_settings::Initialize();
@@ -1441,7 +1479,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int) {
     LoadAlertThresholds();
     LoadChargeTargets();
     battery_history::Initialize(g_demo);
-    if (!g_demo) updates::Initialize(g_hwnd, g_wlmouseOnly);
+    if (!g_demo) updates::Initialize(g_hwnd, g_wlmouseOnly, AnnounceUpdate);
     Reconcile();
     UpdatePlaceholder();  // something to click on until the first poll finishes
     if (g_wantWidget) SetTimer(g_hwnd, TIMER_WIDGET, 1000, nullptr);

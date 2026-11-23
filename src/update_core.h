@@ -43,4 +43,13 @@ inline std::string SignedPayload(std::string_view repo, std::string_view name, s
     return "2.4BatteryMonitor release v1\n" + std::string(repo) + "\n" + std::string(name) + "\n" + std::string(hash) + "\n";
 }
 
+// Release assets an installed copy (the Inno Setup installer) and a portable copy (the bare executable)
+// update from. The version is part of the name, and the name is part of the signed payload, so an older
+// signed file cannot be offered as a newer one.
+inline std::wstring SetupAssetName(std::wstring_view version) {
+    return L"2.4BatteryMonitor-Setup-" + std::wstring(version) + L".exe";
+}
+inline std::wstring PortableAssetName(std::wstring_view version) {
+    return L"2.4BatteryMonitor-" + std::wstring(version) + L".exe";
+}
 }

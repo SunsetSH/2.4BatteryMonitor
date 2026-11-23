@@ -1,5 +1,6 @@
 #include "update.h"
 #include "app_settings.h"
+#include "self_update.h"
 #include "update_core.h"
 #include "i18n.h"
 #include "../build/version.h"
@@ -18,7 +19,10 @@ namespace {
 
 constexpr UINT kCheck = 470, kAutomatic = 471, kInstall = 472, kRelease = 473;
 constexpr UINT_PTR kSchedule = 21, kCompletion = 22;
-constexpr DWORD kDaily = 24 * 60 * 60 * 1000;
+// The automatic check runs once per start (usually at sign-in), 30 s after it. Without a network yet, or with
+// a full-screen app hiding the notification, it tries again a few times.
+constexpr DWORD kFirstCheck = 30 * 1000, kRetry = 5 * 60 * 1000;
+constexpr unsigned kAutomaticTries = 3;
 constexpr auto kSettings = app_settings::kKey;
 constexpr wchar_t kGitHub[] = L"github.com";
 constexpr char kRepo[] = WB_UPDATE_REPO;
@@ -39,6 +43,7 @@ struct Response {
 
 struct Job {
     enum class Kind { Manual, Automatic, Download } kind;
+    bool portable = false;  // Download: the bare executable for a portable copy instead of the installer
     std::wstring version;
     std::vector<BYTE> installer;
     bool success = false;
@@ -48,6 +53,8 @@ struct Job {
 HWND window;
 bool wlmouseOnly;
 bool automatic;
+unsigned automaticTries;  // automatic checks started since this start
+bool (*announce)(const std::wstring& version);
 std::wstring available;
 std::shared_ptr<Job> active;
 HANDLE worker;
@@ -111,8 +118,6 @@ std::vector<BYTE> Asset(const std::wstring& version, const std::wstring& name, s
     return Request(host.c_str(), path, limit, job).bytes;
 }
 
-std::wstring SetupName(const std::wstring& version) { return L"2.4BatteryMonitor-Setup-" + version + L".exe"; }
-
 std::string Hex(const BYTE* bytes, size_t count) {
     std::string out;
     for (size_t i = 0; i < count; ++i) {
@@ -157,7 +162,7 @@ DWORD WINAPI Work(LPVOID parameter) {
     Job& job = **arg;
     try {
         if (job.kind == Job::Kind::Download) {
-            auto name = SetupName(job.version);
+            auto name = job.portable ? PortableAssetName(job.version) : SetupAssetName(job.version);
             auto signature = Asset(job.version, name + L".sig", 64, job);
             if (signature.size() == 64) {
                 auto bytes = Asset(job.version, name, 64 * 1024 * 1024, job);
@@ -181,10 +186,11 @@ DWORD WINAPI Work(LPVOID parameter) {
     return 0;
 }
 
-void Start(Job::Kind kind) {
+void Start(Job::Kind kind, bool portable = false) {
     if (!window || worker || !SetTimer(window, kCompletion, 250, Tick)) return;
     active = std::make_shared<Job>();
     active->kind = kind;
+    active->portable = portable;
     if (kind == Job::Kind::Download) active->version = available;
     auto* arg = new std::shared_ptr<Job>(active);
     worker = CreateThread(nullptr, 0, Work, arg, 0, nullptr);
@@ -193,6 +199,12 @@ void Start(Job::Kind kind) {
         active.reset();
         KillTimer(window, kCompletion);
     }
+}
+
+void OpenReleasePage() {
+    if (available.empty()) return;
+    auto page = std::wstring(L"https://github.com") + kProject + L"/tag/v" + available;
+    ShellExecuteW(window, L"open", page.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
 }
 
 // Match the registered installation to the running executable before offering an in-place upgrade.
@@ -225,7 +237,7 @@ bool RunSetup(const Job& job) {
     if (!GetTempFileNameW(dir, L"BHU", 0, unique)) return false;
     // A private staging directory keeps the executable's directory empty of other libraries.
     if (!DeleteFileW(unique) || !CreateDirectoryW(unique, nullptr)) return false;
-    auto path = std::wstring(unique) + L"\\" + SetupName(job.version);
+    auto path = std::wstring(unique) + L"\\" + SetupAssetName(job.version);
     HANDLE file = CreateFileW(path.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (file == INVALID_HANDLE_VALUE) { RemoveDirectoryW(unique); return false; }
     DWORD written = 0;
@@ -263,8 +275,14 @@ bool RunSetup(const Job& job) {
 
 void CALLBACK Tick(HWND, UINT, UINT_PTR timer, DWORD) {
     if (timer == kSchedule) {
-        if (!window || !automatic) return;
-        SetTimer(window, kSchedule, kDaily, Tick);
+        if (!window) return;
+        KillTimer(window, kSchedule);
+        if (!automatic) return;
+        if (worker) {  // a manual check or a download is running: look again a bit later
+            SetTimer(window, kSchedule, kFirstCheck, Tick);
+            return;
+        }
+        automaticTries++;
         Start(Job::Kind::Automatic);
         return;
     }
@@ -274,10 +292,27 @@ void CALLBACK Tick(HWND, UINT, UINT_PTR timer, DWORD) {
     worker = nullptr;
     auto done = std::move(active);
     if (done->kind == Job::Kind::Download) {
-        if (!done->success || !RunSetup(*done))
+        if (done->success && done->portable) {
+            // The new copy waits for this process to exit before it starts its tray.
+            if (self_update::ReplaceAndRestart(done->installer, wlmouseOnly)) {
+                PostMessageW(window, WM_CLOSE, 0, 0);
+                return;
+            }
+            MessageBoxW(window, T(L"Could not update this copy in its folder. The release page opens instead."),
+                        L"2.4BatteryMonitor", MB_OK | MB_ICONWARNING);
+            OpenReleasePage();
+        } else if (!done->success || !RunSetup(*done)) {
             MessageBoxW(window, T(L"The signed update could not be verified or started."), L"2.4BatteryMonitor", MB_OK | MB_ICONWARNING);
+            if (done->portable) OpenReleasePage();  // e.g. a release without the signed portable executable
+        }
     } else {
         if (done->success) available = done->version;
+        // A newer version is announced on every start until it is installed: a Windows notification, nothing
+        // is downloaded until the user agrees.
+        if (done->kind == Job::Kind::Automatic) {
+            const bool handled = done->success && (available.empty() || (announce && announce(available)));
+            if (!handled && automatic && automaticTries < kAutomaticTries) SetTimer(window, kSchedule, kRetry, Tick);
+        }
         if (done->kind == Job::Kind::Manual) {
             auto message = !done->success ? std::wstring(T(L"Could not check GitHub Releases."))
                 : available.empty() ? std::wstring(T(L"2.4BatteryMonitor is up to date."))
@@ -291,13 +326,26 @@ void CALLBACK Tick(HWND, UINT, UINT_PTR timer, DWORD) {
 
 void SetWlmouseOnly(bool only) { wlmouseOnly = only; }
 
-void Initialize(HWND owner, bool only) {
+void Initialize(HWND owner, bool only, bool (*announceVersion)(const std::wstring& version)) {
     window = owner;
     wlmouseOnly = only;
-    DWORD value = 0, size = sizeof(value);
-    RegGetValueW(HKEY_CURRENT_USER, kSettings, L"AutoCheckUpdates", RRF_RT_REG_DWORD, nullptr, &value, &size);
-    automatic = value != 0;
-    if (automatic) SetTimer(window, kSchedule, 30000, Tick);
+    announce = announceVersion;
+    // On unless the user turned it off: checking only reads the latest release tag, installing always asks.
+    automatic = app_settings::LoadDword(L"AutoCheckUpdates", 1) != 0;
+    if (automatic) SetTimer(window, kSchedule, kFirstCheck, Tick);
+}
+
+void InstallAvailable() {
+    if (!window || worker || available.empty()) return;
+    if (!kKey[0]) return OpenReleasePage();  // a build without the release key cannot verify downloads
+    const bool portable = !InstallScope();
+    const std::wstring question =
+        portable ? TF(L"Download version {version}, replace this copy and restart 2.4BatteryMonitor?",
+                      { { L"version", available } })
+                 : std::wstring(T(L"Download and start the signed 2.4BatteryMonitor installer?"));
+    const int answer =
+        MessageBoxW(window, question.c_str(), L"2.4BatteryMonitor", MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2);
+    if (answer == IDYES) Start(Job::Kind::Download, portable);
 }
 
 void AddMenu(HMENU parent) {
@@ -310,7 +358,7 @@ void AddMenu(HMENU parent) {
     if (!available.empty()) {
         auto title = TF(L"Open release {version}", {{L"version", available}});
         AppendMenuW(menu, MF_STRING, kRelease, title.c_str());
-        if (kKey[0] && InstallScope()) {
+        if (kKey[0]) {
             auto install = TF(L"Install version {version}...", {{L"version", available}});
             AppendMenuW(menu, MF_STRING | (worker ? MF_GRAYED : 0), kInstall, install.c_str());
         }
@@ -324,22 +372,17 @@ bool MenuCommand(UINT command) {
             automatic = !automatic;
             DWORD value = automatic;
             RegSetKeyValueW(HKEY_CURRENT_USER, kSettings, L"AutoCheckUpdates", REG_DWORD, &value, sizeof(value));
+            automaticTries = 0;
             if (automatic) SetTimer(window, kSchedule, 1000, Tick);
             else KillTimer(window, kSchedule);
             return true;
         }
         case kCheck: Start(Job::Kind::Manual); return true;
         case kRelease:
-            if (!available.empty()) {
-                auto page = std::wstring(L"https://github.com") + kProject + L"/tag/v" + available;
-                ShellExecuteW(window, L"open", page.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
-            }
+            OpenReleasePage();
             return true;
         case kInstall:
-            if (!worker && !available.empty() && kKey[0] && InstallScope() &&
-                MessageBoxW(window, T(L"Download and start the signed 2.4BatteryMonitor installer?"), L"2.4BatteryMonitor",
-                            MB_YESNO | MB_ICONQUESTION | MB_DEFBUTTON2) == IDYES)
-                Start(Job::Kind::Download);
+            InstallAvailable();
             return true;
         default: return false;
     }

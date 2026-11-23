@@ -64,7 +64,7 @@ build/tests/$(1).exe: tests/$(1).cpp $(2) $$(TEST_DEPS)
 endef
 
 $(eval $(call win_test,update_core_test,,))
-$(eval $(call win_test,update_signature_test,src/i18n.cpp,-lwinhttp -lbcrypt))
+$(eval $(call win_test,update_signature_test,src/i18n.cpp src/app_settings.cpp src/self_update.cpp,-lwinhttp -lbcrypt))
 $(eval $(call win_test,wlmouse_driver_test,src/drivers/wlmouse.cpp,))
 $(eval $(call win_test,mixed_devices_test,src/drivers/wlmouse.cpp src/drivers/ajazz_ak992.cpp src/drivers/endorfy.cpp,))
 $(eval $(call portable_test,device_aliases_test,,))
@@ -127,6 +127,7 @@ $(eval $(call portable_test,generic_protocol_test,,))
 $(eval $(call portable_test,driver_lanes_test,,))
 $(eval $(call win_test,power_supply_test,src/hid_util.cpp,))
 $(eval $(call portable_test,ignore_list_test,,))
+$(eval $(call win_test,self_update_test,src/self_update.cpp,))
 $(eval $(call portable_test,tests_registered_test,,))
 
 test: $(TESTS)

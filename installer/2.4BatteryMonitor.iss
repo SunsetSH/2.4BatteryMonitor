@@ -106,6 +106,42 @@ begin
     RegWriteStringValue(HKCU, RunKey, RunValue, BackgroundRunValue() + ' --wlmouse');
 end;
 
+{ The autostart entry of a portable copy (the same value name, another path) moves to this installation,
+  so sign-in starts the installed copy, in the same WLMouse mode. }
+procedure MigrateAutostart();
+var
+  Value, Exe: String;
+  Quote: Integer;
+begin
+  if not RegQueryStringValue(HKCU, RunKey, RunValue, Value) then
+    exit;
+  if (Length(Value) < 2) or (Value[1] <> '"') then
+    exit;
+  Quote := Pos('"', Copy(Value, 2, Length(Value)));
+  if Quote = 0 then
+    exit;
+  Exe := Copy(Value, 2, Quote - 1);
+  if (CompareText(ExtractFileExt(Exe), '.exe') <> 0) or
+     (CompareText(Exe, ExpandConstant('{app}\2.4BatteryMonitor.exe')) = 0) then
+    exit;
+  if Pos('--wlmouse', Copy(Value, Quote + 2, Length(Value))) > 0 then
+    RegWriteStringValue(HKCU, RunKey, RunValue, BackgroundRunValue() + ' --wlmouse')
+  else
+    RegWriteStringValue(HKCU, RunKey, RunValue, BackgroundRunValue());
+end;
+
+{ Every copy of one user shares a single-instance lock. A portable copy left running would take over
+  each start of the installed one, so any running copy is closed first. --quit only closes it. }
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  ResultCode: Integer;
+begin
+  Result := '';
+  ExtractTemporaryFile('2.4BatteryMonitor.exe');
+  ExecAsOriginalUser(ExpandConstant('{tmp}\2.4BatteryMonitor.exe'), '--quit', '', SW_HIDE,
+    ewWaitUntilTerminated, ResultCode);
+end;
+
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   Value: String;
@@ -124,6 +160,8 @@ begin
     else
       RemoveOwnAutostart();
   end;
+  if CurStep = ssPostInstall then
+    MigrateAutostart();
 end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);

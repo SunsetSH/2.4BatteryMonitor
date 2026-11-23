@@ -116,9 +116,10 @@ The windows follow the Windows light or dark theme. Try the interface without yo
 
 ## Quick start
 
-1. Download `2.4BatteryMonitor-<version>-portable.zip` from
-   [Releases](https://github.com/SunsetSH/2.4BatteryMonitor/releases/latest) and unpack it anywhere.
-2. Run `2.4BatteryMonitor.exe`. The device overview opens and the levels appear in the tray.
+1. Download `2.4BatteryMonitor-Setup-<version>.exe` from
+   [Releases](https://github.com/SunsetSH/2.4BatteryMonitor/releases/latest) and run it (no administrator rights
+   needed). Without installing: unpack `2.4BatteryMonitor-<version>-portable.zip` anywhere.
+2. Start 2.4BatteryMonitor. The device overview opens and the levels appear in the tray.
 3. Want percentages right on the taskbar? **Settings → Show battery levels → Taskbar widget.** Startup with
    Windows is there too.
 
@@ -263,9 +264,15 @@ levels (-1 when not reported). With *Write status.json for other apps* the same 
 
 ## Updates
 
-**Updates** in the menu checks the latest stable GitHub release. Automatic checks are off by default. A portable
-copy opens the release page; an installed copy downloads the signed installer and verifies its ECDSA signature
-before starting it.
+On every start (usually at sign-in) the app looks up the number of the latest stable GitHub release once
+(turn it off in the **Updates** menu). A newer version shows a Windows notification; nothing is downloaded without
+your consent.
+**Updates → Install version…** or a click on the notification downloads the signed file and verifies its ECDSA
+signature: an installed copy starts the new installer, a portable copy replaces its EXE in the same folder and
+restarts. If the folder is not writable, the release page opens instead.
+
+The installer closes a running portable copy and moves its startup entry to the installed one; settings and
+history are shared.
 
 ## Linux (experimental)
 

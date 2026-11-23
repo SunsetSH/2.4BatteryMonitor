@@ -45,6 +45,7 @@ The overview, settings and history windows draw themselves in one palette (`src/
 | [`src/labels.cpp`](../src/labels.cpp) | Short captions for devices of the same kind |
 | [`src/i18n.cpp`](../src/i18n.cpp) | Translations, `T()` and `TF()` |
 | [`src/update.cpp`](../src/update.cpp), [`src/update_core.h`](../src/update_core.h) | Update check, download and signature verification |
+| [`src/self_update.cpp`](../src/self_update.cpp) | A portable copy replaces its own EXE and restarts ([ADR 0008](adr/0008-portable-self-update.md)) |
 | [`src/json_output.h`](../src/json_output.h) | `--json` output, shared by Windows and Linux |
 | [`src/diagnostics.cpp`](../src/diagnostics.cpp) | Extra `--dump` sections (USB, Bluetooth) |
 | [`src/app_settings.cpp`](../src/app_settings.cpp) | Registry settings under `HKCU\Software\2.4BatteryMonitor` |
@@ -82,6 +83,7 @@ The overview, settings and history windows draw themselves in one palette (`src/
 | New UI text | `src/i18n.h#TF`, then `lang/_template.txt` |
 | JSON fields | `src/json_output.h#DevicesToJson` |
 | Update check and signature | `src/update_core.h`, `scripts/sign-update.ps1` |
+| Update notification, portable update | `src/update.cpp#InstallAvailable`, `src/self_update.cpp`, `--updated-from` in `src/main.cpp#wWinMain` |
 | Linux driver list | `linux/Makefile.linux#DRIVERS`, `src/linux/devices_linux.cpp#PollAllDevices` |
 
 Contributions are welcome. Read [CONTRIBUTING.md](../CONTRIBUTING.md) first: drivers must stay read-only, match
@@ -148,9 +150,10 @@ The repository for update checks is set in `installer/update-repository.txt` as 
    Keep access to that account's signing key. Commit only `installer/update-public-key.txt`.
 2. Build and package matching versions: `build.bat 1.2.3`, then
    `powershell -File installer\build-installer.ps1 -Version 1.2.3`.
-3. Run `powershell -File scripts\sign-update.ps1 -Version 1.2.3`. Attach
-   `2.4BatteryMonitor-Setup-1.2.3.exe` and its `.sig` to public release `v1.2.3`, mark it as the latest stable
-   release, and optionally attach the portable ZIP.
+3. Run `powershell -File scripts\sign-update.ps1 -Version 1.2.3`: it signs the installer and
+   `2.4BatteryMonitor-1.2.3.exe`. Attach both files, both `.sig`, the portable ZIP and `SHA256SUMS.txt` to public
+   release `v1.2.3` and mark it as the latest stable release. Installed copies update from the installer, portable
+   ones from the EXE ([ADR 0008](adr/0008-portable-self-update.md)).
 
 The ECDSA P-256 signature binds the installer SHA-256 to its name and repository. A new signing key requires
 users to upgrade manually to a build with the new public key.

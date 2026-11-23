@@ -1,4 +1,5 @@
-# Builds dist\2.4BatteryMonitor-Setup-<version>.exe and dist\2.4BatteryMonitor-<version>-portable.zip.
+# Builds dist\2.4BatteryMonitor-Setup-<version>.exe, dist\2.4BatteryMonitor-<version>.exe (what portable copies
+# update from) and dist\2.4BatteryMonitor-<version>-portable.zip.
 # Needs: 2.4BatteryMonitor.exe already built (make / build.bat) and Inno Setup 6 or 7 installed.
 param([string]$Version = "1.0.0")
 $ErrorActionPreference = "Stop"
@@ -32,8 +33,10 @@ try {
     }
 }
 
-$sums = foreach ($name in "2.4BatteryMonitor-Setup-$Version.exe", "2.4BatteryMonitor-$Version-portable.zip") {
+Copy-Item 2.4BatteryMonitor.exe "dist\2.4BatteryMonitor-$Version.exe" -Force
+
+$sums = foreach ($name in "2.4BatteryMonitor-Setup-$Version.exe", "2.4BatteryMonitor-$Version.exe", "2.4BatteryMonitor-$Version-portable.zip") {
     "$((Get-FileHash (Join-Path 'dist' $name) -Algorithm SHA256).Hash.ToLower())  $name"
 }
 [IO.File]::WriteAllText((Join-Path $root 'dist\SHA256SUMS.txt'), (($sums -join "`n") + "`n"), (New-Object Text.UTF8Encoding($false)))
-Write-Host "Done: dist\2.4BatteryMonitor-Setup-$Version.exe, dist\2.4BatteryMonitor-$Version-portable.zip and dist\SHA256SUMS.txt"
+Write-Host "Done: dist\2.4BatteryMonitor-Setup-$Version.exe, dist\2.4BatteryMonitor-$Version.exe, dist\2.4BatteryMonitor-$Version-portable.zip and dist\SHA256SUMS.txt"

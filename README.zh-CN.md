@@ -112,8 +112,9 @@ Logitech、Razer、SteelSeries、Corsair、HyperX、Sony、Xbox、Samsung、AirP
 ## 快速开始
 
 1. 从 [Releases](https://github.com/SunsetSH/2.4BatteryMonitor/releases/latest) 下载
-   `2.4BatteryMonitor-<版本>-portable.zip`，解压到任意文件夹。
-2. 运行 `2.4BatteryMonitor.exe`。设备概览会打开，电量显示在托盘中。
+   `2.4BatteryMonitor-Setup-<版本>.exe` 并运行（无需管理员权限）。不想安装：将
+   `2.4BatteryMonitor-<版本>-portable.zip` 解压到任意文件夹。
+2. 启动 2.4BatteryMonitor。设备概览会打开，电量显示在托盘中。
 3. 想直接在任务栏上看到百分比？**设置 → 电量显示方式 → 任务栏小组件。**开机启动也在这里设置。
 
 > [!TIP]
@@ -248,8 +249,11 @@ Logitech、Razer、SteelSeries、Corsair、HyperX、Sony、Xbox、Samsung、AirP
 
 ## 更新
 
-菜单中的 **更新** 会检查 GitHub 上最新的稳定版本。自动检查默认关闭。便携版会打开版本页面；通过安装程序安装的版本会
-下载已签名的安装程序，并在运行前验证其 ECDSA 签名。
+应用每次启动时（通常是登录 Windows 时）查询一次 GitHub 上最新稳定版本的版本号（可在 **更新** 菜单中关闭）。发现新版本时
+会显示 Windows 通知；未经你同意不会下载任何内容。**更新 → 安装版本…** 或点击通知会下载已签名的文件并验证其 ECDSA 签名：安装版会运行新的安装程序，便携版会
+在同一文件夹中替换自身的 EXE 并重新启动。如果文件夹不可写，则改为打开版本页面。
+
+安装程序会关闭正在运行的便携版，并把它的开机启动项转到安装版；设置和历史记录是共用的。
 
 ## Linux（实验性）
 

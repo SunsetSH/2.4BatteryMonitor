@@ -16,4 +16,9 @@ int main() {
     assert(ReleaseAssetHost(L"release-assets.githubusercontent.com"));
     assert(!ReleaseAssetHost(L"release-assets.githubusercontent.com.evil.test"));
     assert(SignedPayload("owner/repo", "setup.exe", "abc") == "2.4BatteryMonitor release v1\nowner/repo\nsetup.exe\nabc\n");
+
+    // Asset names: the names release scripts upload and sign (scripts/sign-update.ps1).
+    assert(SetupAssetName(L"1.2.0") == L"2.4BatteryMonitor-Setup-1.2.0.exe");
+    assert(PortableAssetName(L"1.2.0") == L"2.4BatteryMonitor-1.2.0.exe");
+    assert(PortableAssetName(L"1.2.0") != PortableAssetName(L"1.1.0"));
 }
