@@ -156,6 +156,7 @@ Battery = 배터리
 Connection = 연결
 Settings = 설정
 Could not open the device overview. = 장치 개요를 열지 못했습니다.
+Could not change the Windows startup entry. = Windows 시작 항목을 변경하지 못했습니다.
 Settings... = 설정...
 Display = 표시
 Devices = 장치

@@ -223,6 +223,9 @@ void PollBluetooth(PollContext& ctx) {
         hidIds[cont] = { c.vid, c.pid };
         if (ctx.IsClaimed(c.vid, c.pid)) reported.insert(cont);
     }
+    // Ignored devices have no collections left in ctx.colls; their containers are skipped as well, or a
+    // Bluetooth mouse the user ignored would come back with Windows' level.
+    for (const auto& path : ctx.ignoredPaths) reported.insert(HidContainer(path));
 
     bool watching = false, waited = false;
     for (auto& [cid, f] : battery) {

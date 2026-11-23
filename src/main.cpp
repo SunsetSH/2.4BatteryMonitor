@@ -27,6 +27,7 @@
 #include "devices.h"
 #include "battery_history.h"
 #include "i18n.h"
+#include "ignore_list.h"
 #include "json_output.h"
 #include "labels.h"
 #include "rename_dialog.h"
@@ -87,6 +88,10 @@ HANDLE g_refreshEvt, g_stopEvt, g_worker;
 std::mutex g_resultsMutex;
 std::optional<std::vector<DeviceStatus>> g_pendingResults;
 bool g_pendingPartial = false;  // g_pendingResults is what a running poll found so far
+unsigned g_pendingServed = 0;   // the g_refreshRequests value the poll behind g_pendingResults started after
+// "Refresh" clicks so far. A poll that was already running when the user clicked does not end the
+// "Checking batteries..." state; the next one, which starts after the click, does.
+std::atomic<unsigned> g_refreshRequests{ 0 };
 backoff::Schedule g_backoff;    // used by the poll threads only
 std::atomic<bool> g_resetBackoff{false};  // set by the UI thread: poll every driver next time
 // No polling while the session is locked or the display is off: nobody looks, and every poll wakes
@@ -281,21 +286,26 @@ bool AutostartEnabled() {
     return false;
 }
 
-void SetAutostart(bool on) {
-    if (g_demo) return;
+// False when the Run entry could not be written or removed.
+bool SetAutostart(bool on) {
+    if (g_demo) return true;
     HKEY k;
     LSTATUS status = on
         ? RegCreateKeyExW(HKEY_CURRENT_USER, kRunKey, 0, nullptr, 0, KEY_SET_VALUE, nullptr, &k, nullptr)
         : RegOpenKeyExW(HKEY_CURRENT_USER, kRunKey, 0, KEY_SET_VALUE, &k);
-    if (status != ERROR_SUCCESS) return;
+    if (status == ERROR_FILE_NOT_FOUND && !on) return true;  // no Run key: nothing to remove
+    if (status != ERROR_SUCCESS) return false;
     if (on) {
         std::wstring v = L"\"" + ExePath() + L"\" --background";
         if (g_wlmouseOnly) v += L" --wlmouse";
-        RegSetValueExW(k, kRunValue, 0, REG_SZ, (const BYTE*)v.c_str(), (DWORD)((v.size() + 1) * sizeof(wchar_t)));
+        status =
+            RegSetValueExW(k, kRunValue, 0, REG_SZ, (const BYTE*)v.c_str(), (DWORD)((v.size() + 1) * sizeof(wchar_t)));
     } else {
-        RegDeleteValueW(k, kRunValue);
+        status = RegDeleteValueW(k, kRunValue);
+        if (status == ERROR_FILE_NOT_FOUND) status = ERROR_SUCCESS;
     }
     RegCloseKey(k);
+    return status == ERROR_SUCCESS;
 }
 
 // ---- tray management --------------------------------------------------------------------------
@@ -519,7 +529,7 @@ overview::Row OverviewRow(const TrayEntry& e) {
 
 std::vector<TrayEntry*> g_overviewOrder;  // the entries in the overview's card order
 
-ULONGLONG g_lastPollTick = 0;
+SYSTEMTIME g_lastPollTime{};  // local time of the last full result; wYear 0 = none yet
 
 void UpdateOverview() {
     if (!overview::Window()) return;
@@ -533,10 +543,19 @@ void UpdateOverview() {
     if (busy) status += T(L"Checking batteries...");
     else if (rows.empty()) status += T(L"No devices with battery info found");
     else status += TF(L"Detected devices: {count}", {{L"count", std::to_wstring(rows.size())}});
-    if (!busy && g_lastPollTick) {
-        wchar_t time[64] = {};
-        if (GetTimeFormatEx(LOCALE_NAME_USER_DEFAULT, TIME_NOSECONDS, nullptr, nullptr, time, ARRAYSIZE(time)))
-            status += L"  \u00B7  " + TF(L"updated {time}", { { L"time", time } });
+    if (!busy && g_lastPollTime.wYear) {
+        // No polls while the session is locked: after a night the last one is from yesterday, so say so.
+        SYSTEMTIME now;
+        GetLocalTime(&now);
+        std::wstring when;
+        wchar_t buf[64] = {};
+        const SYSTEMTIME& t = g_lastPollTime;
+        const bool today = now.wYear == t.wYear && now.wMonth == t.wMonth && now.wDay == t.wDay;
+        if (!today &&
+            GetDateFormatEx(LOCALE_NAME_USER_DEFAULT, DATE_SHORTDATE, &t, nullptr, buf, ARRAYSIZE(buf), nullptr))
+            when = std::wstring(buf) + L" ";
+        if (GetTimeFormatEx(LOCALE_NAME_USER_DEFAULT, TIME_NOSECONDS, &g_lastPollTime, nullptr, buf, ARRAYSIZE(buf)))
+            status += L"  \u00B7  " + TF(L"updated {time}", { { L"time", when + buf } });
     }
     overview::Update(rows, status, busy);
 }
@@ -558,6 +577,7 @@ void OpenOverviewAtCursor() {
 }
 
 void RefreshNow() {
+    g_refreshRequests++;
     g_refreshing = true;
     g_resetBackoff = true;
     SetEvent(g_refreshEvt);
@@ -566,6 +586,10 @@ void RefreshNow() {
 
 void MonitorAllDevices() {
     if (!g_wlmouseOnly.exchange(false)) return;
+    // The Run entry and the restart after an update still say --wlmouse; the chosen mode must survive both.
+    if (!g_demo) updates::SetWlmouseOnly(false);
+    if (AutostartEnabled() && !SetAutostart(true))
+        MessageBoxW(nullptr, T(L"Could not change the Windows startup entry."), kAppName, MB_OK | MB_ICONERROR);
     g_pollIntervalMs = LoadPollSeconds() * 1000;
     RefreshNow();
 }
@@ -605,11 +629,12 @@ void UpdateWidget() {
 
 // `partial`: what a running poll found so far. It updates those devices only; devices it does not
 // list yet are kept until the full result arrives.
-void OnResults(std::vector<DeviceStatus>& results, bool partial) {
+// `served`: the g_refreshRequests value the poll started after.
+void OnResults(std::vector<DeviceStatus>& results, bool partial, unsigned served) {
     if (!partial) {
         g_firstPollDone = true;
-        g_refreshing = false;
-        g_lastPollTick = GetTickCount64();
+        if (served == g_refreshRequests) g_refreshing = false;
+        GetLocalTime(&g_lastPollTime);
     }
     std::map<std::wstring, bool> seen;
     for (auto& s : results) {
@@ -638,11 +663,15 @@ void OnResults(std::vector<DeviceStatus>& results, bool partial) {
         if (notify) ShowBatteryAlert(e);
         if (charged) ShowChargedReminder(e);
     }
+    // A device the user just ignored leaves at once instead of lingering as "asleep" for its grace time.
+    const auto ignored =
+        partial ? std::vector<ignore_list::Id>{} : ignore_list::Parse(app_settings::LoadText(L"IgnoreDevices"));
     for (auto it = g_entries.begin(); !partial && it != g_entries.end();) {
         auto& e = it->second;
         // Some receivers drop sleeping devices from the link; keep showing the last value for a while
         // (at least two poll intervals).
         bool inGrace = !seen.count(it->first) && e.st.graceSec > 0 && e.st.connected &&
+                       !(e.st.vid && ignore_list::Contains(ignored, e.st.vid, e.st.pid)) &&
                        GetTickCount64() - e.lastSeen <
                            std::max<ULONGLONG>((ULONGLONG)e.st.graceSec * 1000, 2ULL * g_pollIntervalMs);
         if (inGrace) {
@@ -971,8 +1000,10 @@ void SetSwitch(const std::wstring& name, bool on) {
     else if (name == L"BrandColors") SetBrandColors(on);
     else if (name == L"HideLastKnownDevices") SetHideLastKnown(on);
     else if (name == L"ShowDisconnectedDevices") SetShowDisconnectedDevices(on);
-    else if (name == L"Autostart") SetAutostart(on);
-    else {
+    else if (name == L"Autostart") {
+        if (!SetAutostart(on))
+            MessageBoxW(nullptr, T(L"Could not change the Windows startup entry."), kAppName, MB_OK | MB_ICONERROR);
+    } else {
         bool* flag = name == L"RecordBatteryHistory" ? &g_recordHistory : name == L"StatusFile" ? &g_statusFile
                    : name == L"QuietInFullScreen" ? &g_quietFullScreen : nullptr;
         if (!flag) return;
@@ -1051,13 +1082,14 @@ std::vector<DeviceStatus> PollDevices() {
     return g_wlmouseOnly ? PollWlmouseDevices() : PollAllDevices();
 }
 
-void PostResults(std::vector<DeviceStatus> results, bool partial) {
+void PostResults(std::vector<DeviceStatus> results, bool partial, unsigned served = 0) {
     {
         std::lock_guard<std::mutex> lock(g_resultsMutex);
         // A full result replaces an unread partial one; a partial one never replaces an unread full one.
         if (partial && g_pendingResults && !g_pendingPartial) return;
         g_pendingResults = std::move(results);
         g_pendingPartial = partial;
+        g_pendingServed = served;
     }
     PostMessageW(g_hwnd, WM_RESULTS, 0, 0);
 }
@@ -1088,11 +1120,12 @@ DWORD WINAPI Worker(LPVOID) {
         while (Paused()) {  // locked or display off: wait for unlock (a refresh event) or exit
             if (WaitForMultipleObjects(2, events, FALSE, INFINITE) == WAIT_OBJECT_0) return 0;
         }
+        const unsigned served = g_refreshRequests;
         auto results = PollInBackground();
         if (g_wlmouseOnly && std::any_of(results.begin(), results.end(), [](const DeviceStatus& s) {
                 return s.connected && s.percent >= 0 && !s.asleep;
             })) startupPoll = ARRAYSIZE(startupPollDelays);
-        PostResults(std::move(results), false);
+        PostResults(std::move(results), false, served);
         DWORD delay = g_pollIntervalMs;
         if (startupPoll < ARRAYSIZE(startupPollDelays)) delay = startupPollDelays[startupPoll++];
         DWORD wait = WaitForMultipleObjects(2, events, FALSE, delay);
@@ -1125,12 +1158,14 @@ LRESULT CALLBACK WndProc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
             // Messages only wake the UI. Both threads exchange results in process memory.
             std::optional<std::vector<DeviceStatus>> results;
             bool partial = false;
+            unsigned served = 0;
             {
                 std::lock_guard<std::mutex> lock(g_resultsMutex);
                 results.swap(g_pendingResults);
                 partial = g_pendingPartial;
+                served = g_pendingServed;
             }
-            if (results) OnResults(*results, partial);
+            if (results) OnResults(*results, partial, served);
             return 0;
         }
         case WM_TRAY:
@@ -1139,7 +1174,17 @@ LRESULT CALLBACK WndProc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
                 case WM_RBUTTONUP: if (!HIWORD(lp)) ShowMenu(); break;
                 case WM_LBUTTONUP: if (!HIWORD(lp)) OpenOverviewAtCursor(); break;
                 case NIN_SELECT:
-                case NIN_KEYSELECT: OpenOverviewAtCursor(); break;
+                case NIN_KEYSELECT: {
+                    // Enter / Space on a focused icon: version 4 puts the icon's position in wParam, and the
+                    // mouse pointer can be anywhere. A click and a missing position (0) use the pointer.
+                    POINT at;
+                    if (LOWORD(lp) == NIN_KEYSELECT && wp)
+                        at = { (SHORT)LOWORD(wp), (SHORT)HIWORD(wp) };
+                    else
+                        GetCursorPos(&at);
+                    OpenOverview(&at);
+                    break;
+                }
             }
             return 0;
         case WM_OPEN_OVERVIEW:

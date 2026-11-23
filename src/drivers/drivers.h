@@ -14,6 +14,7 @@ struct PollContext
     std::vector<HidColl> colls;
     std::set<std::pair<USHORT, USHORT>> claimed;
     std::set<std::wstring> btContainers; // container ids PollBluetooth already reported
+    std::vector<std::wstring> ignoredPaths; // HID paths of IgnoreDevices entries; PollBluetooth skips their devices
     std::vector<DeviceStatus> out;
     bool waitForInitialControllers = true;
 

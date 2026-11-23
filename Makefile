@@ -126,6 +126,7 @@ $(eval $(call win_test,switch_pro_driver_test,src/drivers/switch_pro.cpp src/hid
 $(eval $(call portable_test,generic_protocol_test,,))
 $(eval $(call portable_test,driver_lanes_test,,))
 $(eval $(call win_test,power_supply_test,src/hid_util.cpp,))
+$(eval $(call portable_test,ignore_list_test,,))
 $(eval $(call portable_test,tests_registered_test,,))
 
 test: $(TESTS)

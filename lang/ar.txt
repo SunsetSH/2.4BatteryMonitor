@@ -144,6 +144,7 @@ Battery = البطارية
 Connection = الاتصال
 Settings = الإعدادات
 Could not open the device overview. = تعذّر فتح النظرة العامة على الأجهزة.
+Could not change the Windows startup entry. = تعذّر تغيير إدخال بدء التشغيل في Windows.
 Settings... = الإعدادات...
 Display = العرض
 Devices = الأجهزة

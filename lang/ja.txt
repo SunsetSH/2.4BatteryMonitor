@@ -143,6 +143,7 @@ Battery = バッテリー
 Connection = 接続
 Settings = 設定
 Could not open the device overview. = デバイスの一覧を開けませんでした。
+Could not change the Windows startup entry. = Windows のスタートアップ項目を変更できませんでした。
 Settings... = 設定...
 Display = 表示
 Devices = デバイス

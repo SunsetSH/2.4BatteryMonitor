@@ -289,6 +289,8 @@ void CALLBACK Tick(HWND, UINT, UINT_PTR timer, DWORD) {
 
 }
 
+void SetWlmouseOnly(bool only) { wlmouseOnly = only; }
+
 void Initialize(HWND owner, bool only) {
     window = owner;
     wlmouseOnly = only;

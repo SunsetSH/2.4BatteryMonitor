@@ -40,6 +40,7 @@ The overview, settings and history windows draw themselves in one palette (`src/
 | [`src/battery_history.cpp`](../src/battery_history.cpp) | History file and chart viewer |
 | [`src/history_model.h`](../src/history_model.h), [`src/runtime_estimate.h`](../src/runtime_estimate.h) | Portable history policy and time-to-empty estimate |
 | [`src/alert_rules.h`](../src/alert_rules.h) | Portable low-battery alert policy |
+| [`src/ignore_list.h`](../src/ignore_list.h) | Portable `IgnoreDevices` parser and result filter, shared by the poll and the settings window |
 | [`src/device_aliases.h`](../src/device_aliases.h), [`src/rename_dialog.cpp`](../src/rename_dialog.cpp) | Custom device names |
 | [`src/labels.cpp`](../src/labels.cpp) | Short captions for devices of the same kind |
 | [`src/i18n.cpp`](../src/i18n.cpp) | Translations, `T()` and `TF()` |
@@ -74,6 +75,7 @@ The overview, settings and history windows draw themselves in one palette (`src/
 | Colors, theme, fonts | `src/ui_theme.h#Palette` |
 | How a level is shown (red, charging) | `src/status_text.h#ShownState`, `#LevelOf` |
 | Settings window rows | `src/settings_rows.cpp#SettingsRows` |
+| Ignored devices (`IgnoreDevices`) | `src/ignore_list.h#Parse`, `src/devices.cpp#FilterIgnored`, `src/drivers/generic.cpp#PollBluetooth`, `src/ignore_list.h#DropIgnored` |
 | Parallel lanes, slow drivers | `src/driver_lanes.h#kLanes`, `src/devices.cpp#PollAllDevices`, `--timing` |
 | Driver test without hardware | `tests/fake_hid.h`, e.g. `tests/kysona_driver_test.cpp` |
 | Time-to-empty estimate | `src/runtime_estimate.h#EstimateRuntime` |

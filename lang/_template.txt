@@ -157,6 +157,7 @@ Battery =
 Connection =
 Settings =
 Could not open the device overview. =
+Could not change the Windows startup entry. =
 Settings... =
 Display =
 Devices =

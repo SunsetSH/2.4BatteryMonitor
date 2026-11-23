@@ -11,6 +11,7 @@
 #include "app_settings.h"
 #include "device_report.h"
 #include "i18n.h"
+#include "ignore_list.h"
 #include "ui_theme.h"
 #include "update.h"
 #include "widget.h"
@@ -51,21 +52,11 @@ std::wstring DataFolder() {
     return std::wstring(base) + L"\\2.4BatteryMonitor";
 }
 
-// IgnoreDevices: "VID:PID" pairs, comma-separated (devices.cpp reads them).
+// IgnoreDevices, read with the poll's parser (ignore_list.h) and written back in its "046D:C52B" form.
 std::vector<std::wstring> IgnoredIds() {
     std::vector<std::wstring> out;
-    std::wstring text = app_settings::LoadText(L"IgnoreDevices");
-    for (auto& ch : text)
-        if (ch == L';' || ch == L' ') ch = L',';
-    size_t pos = 0;
-    while (pos <= text.size()) {
-        size_t end = text.find(L',', pos);
-        if (end == std::wstring::npos) end = text.size();
-        std::wstring id = text.substr(pos, end - pos);
-        for (auto& ch : id) ch = (wchar_t)towupper(ch);
-        if (id.size() == 9 && id[4] == L':') out.push_back(id);
-        pos = end + 1;
-    }
+    for (const auto& id : ignore_list::Parse(app_settings::LoadText(L"IgnoreDevices")))
+        out.push_back(ignore_list::Format(id));
     return out;
 }
 
@@ -75,11 +66,7 @@ void SaveIgnored(const std::vector<std::wstring>& ids) {
     app_settings::SaveText(L"IgnoreDevices", text);
 }
 
-std::wstring IdOf(const DeviceStatus& d) {
-    wchar_t b[16];
-    swprintf(b, 16, L"%04X:%04X", d.vid, d.pid);
-    return b;
-}
+std::wstring IdOf(const DeviceStatus& d) { return ignore_list::Format({ d.vid, d.pid }); }
 
 settings_window::Row Switch(const SettingsApi& api, const wchar_t* name, const wchar_t* title, const wchar_t* detail,
                             bool enabled = true) {

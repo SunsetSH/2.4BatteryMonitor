@@ -143,6 +143,7 @@ Battery = 電量
 Connection = 連線
 Settings = 設定
 Could not open the device overview. = 無法開啟裝置總覽。
+Could not change the Windows startup entry. = 無法變更 Windows 開機啟動項目。
 Settings... = 設定...
 Display = 顯示
 Devices = 裝置

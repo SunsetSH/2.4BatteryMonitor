@@ -87,6 +87,7 @@ Battery = Заряд
 Connection = Подключение
 Settings = Настройки
 Could not open the device overview. = Не удалось открыть список устройств.
+Could not change the Windows startup entry. = Не удалось изменить автозапуск Windows.
 fully charged = полностью заряжено
 last known = последнее известное
 hidden = скрыто

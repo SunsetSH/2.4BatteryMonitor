@@ -20,6 +20,7 @@
 #include "driver_lanes.h"
 #include "drivers/drivers.h"
 #include "hid.h"
+#include "ignore_list.h"
 
 namespace {
 
@@ -132,31 +133,17 @@ const Driver kFallbacks[] = {
 
 constexpr size_t kChainSize = sizeof(kChain) / sizeof(kChain[0]);
 
-// IgnoreDevices (REG_SZ): "VID:PID" pairs in hex, separated by spaces, commas or semicolons.
-std::vector<std::pair<USHORT, USHORT>> IgnoredDevices() {
-    std::vector<std::pair<USHORT, USHORT>> out;
-    const std::wstring text = app_settings::LoadText(L"IgnoreDevices");
-    for (const wchar_t* p = text.c_str(); *p;) {
-        unsigned vid = 0, pid = 0;
-        int used = 0;
-        if (swscanf(p, L" %x:%x%n", &vid, &pid, &used) == 2 && used > 0) {
-            out.push_back({ (USHORT)vid, (USHORT)pid });
-            p += used;
-        } else {
-            p++;
-        }
-        while (*p == L',' || *p == L';' || *p == L' ') p++;
-    }
-    return out;
-}
-
-void FilterIgnored(std::vector<HidColl>& colls) {
-    auto ignored = IgnoredDevices();
-    if (!ignored.empty())
-        colls.erase(std::remove_if(colls.begin(), colls.end(), [&](const HidColl& c) {
-                        return std::find(ignored.begin(), ignored.end(), std::make_pair(c.vid, c.pid)) != ignored.end();
-                    }),
-                    colls.end());
+// Removes the collections of ignored devices and returns their paths: PollBluetooth needs them to
+// skip the same devices in Windows' own Bluetooth battery levels.
+std::vector<std::wstring> FilterIgnored(std::vector<HidColl>& colls, const std::vector<ignore_list::Id>& ignored) {
+    std::vector<std::wstring> removed;
+    if (ignored.empty()) return removed;
+    for (const auto& c : colls)
+        if (ignore_list::Contains(ignored, c.vid, c.pid)) removed.push_back(c.path);
+    colls.erase(std::remove_if(colls.begin(), colls.end(),
+                               [&](const HidColl& c) { return ignore_list::Contains(ignored, c.vid, c.pid); }),
+                colls.end());
+    return removed;
 }
 
 const lanes::Lane* LaneOf(const char* driver) {
@@ -175,7 +162,8 @@ struct Slice {
 
 class Poll {
 public:
-    explicit Poll(const PollOptions& o) : options_(o), slices_(kChainSize) {}
+    Poll(const PollOptions& o, std::vector<ignore_list::Id> ignored)
+        : options_(o), ignored_(std::move(ignored)), slices_(kChainSize) {}
 
     // Runs drivers [index...] that belong to `lane` (null: the main chain) in one context.
     void RunChain(const lanes::Lane* lane, std::vector<HidColl> colls) {
@@ -252,10 +240,12 @@ private:
         lastPartial_ = now;
         std::vector<DeviceStatus> so;
         for (const auto& s : slices_) so.insert(so.end(), s.out.begin(), s.out.end());
+        ignore_list::DropIgnored(so, ignored_);
         options_.partial(std::move(so));
     }
 
     const PollOptions& options_;
+    const std::vector<ignore_list::Id> ignored_;
     std::mutex mutex_;
     std::vector<Slice> slices_;
     ULONGLONG lastPartial_ = 0;
@@ -266,7 +256,7 @@ private:
 std::vector<DeviceStatus> PollWlmouseDevices() {
     PollContext ctx;
     ctx.colls = EnumUsbHidForVendor(0x36A7);
-    FilterIgnored(ctx.colls);
+    FilterIgnored(ctx.colls, ignore_list::Parse(app_settings::LoadText(L"IgnoreDevices")));
     PollGlorious(ctx);  // The alternate protocol for the YING receiver.
     PollWlmouse(ctx);
     return std::move(ctx.out);
@@ -274,8 +264,9 @@ std::vector<DeviceStatus> PollWlmouseDevices() {
 
 std::vector<DeviceStatus> PollAllDevices(const PollOptions& options) {
     std::vector<HidColl> colls = EnumHid();
-    FilterIgnored(colls);
-    Poll poll(options);
+    const auto ignored = ignore_list::Parse(app_settings::LoadText(L"IgnoreDevices"));
+    std::vector<std::wstring> ignoredPaths = FilterIgnored(colls, ignored);
+    Poll poll(options, ignored);
     if (!options.parallel) {
         poll.RunChain(nullptr, colls);
     } else {
@@ -307,7 +298,9 @@ std::vector<DeviceStatus> PollAllDevices(const PollOptions& options) {
         for (auto& t : threads) t.join();
     }
     PollContext ctx = poll.Merged(colls);
+    ctx.ignoredPaths = std::move(ignoredPaths);
     poll.RunFallbacks(ctx);
+    ignore_list::DropIgnored(ctx.out, ignored);
     return std::move(ctx.out);
 }
 

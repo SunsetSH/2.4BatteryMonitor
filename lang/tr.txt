@@ -143,6 +143,7 @@ Battery = Pil
 Connection = Bağlantı
 Settings = Ayarlar
 Could not open the device overview. = Cihaz özeti açılamadı.
+Could not change the Windows startup entry. = Windows başlangıç girdisi değiştirilemedi.
 Settings... = Ayarlar...
 Display = Görünüm
 Devices = Cihazlar

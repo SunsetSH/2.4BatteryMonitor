@@ -155,6 +155,7 @@ Battery = Заряд
 Connection = Підключення
 Settings = Налаштування
 Could not open the device overview. = Не вдалося відкрити список пристроїв.
+Could not change the Windows startup entry. = Не вдалося змінити автозапуск Windows.
 Settings... = Налаштування…
 Display = Відображення
 Devices = Пристрої

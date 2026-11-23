@@ -144,6 +144,7 @@ Battery = סוללה
 Connection = חיבור
 Settings = הגדרות
 Could not open the device overview. = לא ניתן לפתוח את סקירת ההתקנים.
+Could not change the Windows startup entry. = לא ניתן לשנות את רשומת ההפעלה של Windows.
 Settings... = הגדרות...
 Display = תצוגה
 Devices = התקנים

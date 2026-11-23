@@ -143,6 +143,7 @@ Battery = Bateria
 Connection = Conexão
 Settings = Configurações
 Could not open the device overview. = Não foi possível abrir a visão geral dos dispositivos.
+Could not change the Windows startup entry. = Não foi possível alterar a entrada de inicialização do Windows.
 Settings... = Configurações...
 Display = Exibição
 Devices = Dispositivos

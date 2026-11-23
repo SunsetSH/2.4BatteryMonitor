@@ -143,6 +143,7 @@ Battery = Akku
 Connection = Verbindung
 Settings = Einstellungen
 Could not open the device overview. = Die Geräteübersicht konnte nicht geöffnet werden.
+Could not change the Windows startup entry. = Der Windows-Autostart-Eintrag konnte nicht geändert werden.
 Settings... = Einstellungen...
 Display = Anzeige
 Devices = Geräte
