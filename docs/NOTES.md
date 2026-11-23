@@ -18,6 +18,9 @@
   не перенаправить его (`| Out-String`).
 - В PowerShell `[Win32]::FindWindow("класс", $null)` передаёт пустую строку, а не NULL, и окно не находится;
   вызывать FindWindow из C#-обёртки с `null` внутри.
+- Inno Setup 6 стоит для пользователя: `%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe` (его ищет
+  `build-installer.ps1`). Скрипт заново упаковывает ZIP, и хеш меняется: чтобы добавить установщик к уже
+  опубликованному релизу, вызывать ISCC напрямую, затем `sign-update.ps1`.
 - `arbiter_driver_test` требует и `lamzu.cpp`: тест проверяет, что Arbiter и LAMZU на общем VID `373E` не
   перехватывают устройства друг друга.
 

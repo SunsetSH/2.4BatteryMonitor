@@ -48,7 +48,7 @@
 
 - [x] Создать ключ подписи: `scripts/sign-update.ps1 -InitializeKey`, закоммитить `installer/update-public-key.txt`
 - [x] Первый релиз `v1.0.0`: портативный ZIP и `SHA256SUMS.txt` (без установщика: на машине сборки нет Inno Setup)
-- [ ] Установщик и `.sig` в следующем релизе (нужен Inno Setup на машине сборки)
+- [x] Установщик и `.sig` в релизе `v1.1.0` (Inno Setup 6.7.3 на машине сборки)
 - [ ] Манифесты winget и Scoop (нужны URL и SHA-256 опубликованного релиза)
 
 ## Linux
